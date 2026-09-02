@@ -37,3 +37,27 @@ class No:
         self.tarefas = set()
         self.trava_ordem = asyncio.Lock()
         self.evento_fim = asyncio.Event()
+
+        ######
+
+        async def iniciar(self):
+            self.servidor = await asyncio.start_server(
+                self._aceitar, self.dados.enderco, self.dados.porta)
+            self.ativo = True
+            self._criar_tarefa(self._ciclo_do_lider())
+            self._mostrar(f"Nó {self.identificador} ativo; lider {self.lider}")
+
+        async def encerrar(self):
+            if not self.ativos:
+                return
+            self.ativo = False
+            for tarefa in list(self.tarefas):
+                tarefa.cancel()
+            await asyncio.gather(*self.tarefas, return_exceptions=True)
+            await asyncio.sleep(0.05)
+            self.servidor.close()
+            await self.servidor.wait_closed()
+            self.evento_fim.set()
+
+        async def aguardar(self):
+            await self.evento_fim.wait()
