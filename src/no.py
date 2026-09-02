@@ -61,3 +61,17 @@ class No:
 
         async def aguardar(self):
             await self.evento_fim.wait()
+
+        def _criar_tarefa(self, rotina):
+            tarefa = asyncio.create_task(rotina)
+            self.tarefas.add(tarefa)
+            tarefa.add_done_callback(self.tarefas.discard)
+
+        async def _aceitar(self, leitor, escritor):
+            try:
+                await self.processar(await receber_json(leitor))
+            except (ValueError, json.JSONDecodeError) as erro:
+                self.mostrar(f"Erro ao processar mensagem: {erro}")
+            finally:
+                escritor.close()
+                await escritor.wait_closed()
