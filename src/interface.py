@@ -15,6 +15,11 @@ Menu = """
 async def ler_terminal(pergunta: str) -> str:
     return (await asyncio.to_thread(input, pergunta)).strip()
 
+async def solicitar_mensagem(texto: str) -> str:
+    if not texto.strip():
+        raise ValueError("Mensagem não pode ser vazia")
+    return texto.strip()
+
 async def executar_opcao(no: No, opcao: str, perguntar=ler_terminal) -> bool:
     if opcao == "1":
         # Mensagem privada
