@@ -1,0 +1,20 @@
+{
+    "execucao": "demonstracao-3",
+    "nos": [
+        {
+            "numero": 1,
+            "endereco": "127.0.0.1",
+            "porta": 5001
+        },
+        {
+            "numero": 2,
+            "endereco": "127.0.0.1",
+            "porta": 5002
+        },
+        {
+            "numero": 3,
+            "endereco": "127.0.0.1",
+            "porta": 5003
+        }
+    ]
+}
