@@ -19,3 +19,21 @@ class No:
         self.espera_eleicao = espera_eleicao
         self.limite_captura = limite_captura
         self.mostrar_saida = mostrar_saida
+
+        quantidade = len(configuracao.nos)
+        self.relogio = RelogioVetorial(quantidade)
+        self.vetor_sequenciado = [0] * quantidade
+        self.lider = configuracao.maior_identificador
+        self.sequencia = 0
+        self.proxima_sequencia = 1
+        self.ordem_local, self.ordem_global, self.mensagens_privadas = [], [], []
+        self.pedidos_pendentes, self.mensagens_pendentes = [], {}
+        self.captura_atual = None
+        self.ultima_captura = None
+
+        self.ultimo_batimento = monotonic()
+        self.em_eleicao = self.recebeu_ok = self.ativo = False
+        self.servico = None
+        self.tarefas = set()
+        self.trava_ordem = asyncio.Lock()
+        self.evento_fim = asyncio.Event()
