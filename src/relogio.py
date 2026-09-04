@@ -19,4 +19,10 @@ def pode_entregar(marca: list[int], entregues: list[int], indice_origem: int) ->
         return False
     if marca[indice_origem] != entregues[indice_origem] + 1:
         return False
-    return all(valor <= entregues[i] for i, valor in enumerate(marca) if i != indice_origem)
+    
+    for i in range(len(marca)):
+        if i == indice_origem:
+            continue
+        if marca[i] > entregues[i]:
+            return False
+    return True
