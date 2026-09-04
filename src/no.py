@@ -168,3 +168,101 @@ class No:
                     self._mostrar(json.dumps(self.ultima_captura, ensure_ascii=False, indent=2))
                 case tipo:
                     self._mostrar(f"Tipo desconhecido: {tipo}")
+
+        async def _ordenar(self):
+            mudou = True
+            while mudou:
+                mudou = False
+                for pedido in self.pedidos_pendentes.copy():
+                    if not pode_entregar(pedido["vetor"], self.vetor_sequenciado,
+                                        self.indices[pedido["origem"]]):
+                        continue
+                    self.pedidos_pendentes.remove(pedido)
+                    self.vetor_sequenciado = [max(a, b) for a, b in zip(
+                        self.vetor_sequenciado, pedido["vetor"])]
+                    self.sequencia += 1
+                    await self.difundir(criar_mensagem("GRUPO", pedido["origem"],
+                        texto=pedido["texto"], vetor=pedido["vetor"], sequencia=self.sequencia))
+                    mudou = True
+                    break
+
+        def _entregar(self):
+            while self.proxima_sequencia in self.mensagens_pendentes:
+                mensagem = self.mensagens_pendentes.pop(self.proxima_sequencia)
+                self.relogio.mesclar(mensagem["vetor"])
+                self.vetor_sequenciado = [max(a, b) for a, b in zip(
+                    self.vetor_sequenciado, mensagem["vetor"])]
+                registro = {chave: mensagem[chave] for chave in
+                            ("sequencia", "origem", "texto", "vetor")}
+                self.ordem_global.append(registro)
+                self._registrar("entrega global", mensagem["texto"], mensagem["origem"])
+                self._mostrar(f"[global {self.proxima_sequencia}] {mensagem['texto']}")
+                self.proxima_sequencia += 1
+
+        async def _ciclo_do_lider(self):
+            while self.ativo:
+                if self.identificador == self.lider:
+                    await self.difundir(criar_mensagem("BATIMENTO", self.identificador))
+                elif monotonic() - self.ultimo_batimento > self.limite_lider and not self.em_eleicao:
+                    self._criar_tarefa(self._eleger())
+                await asyncio.sleep(self.intervalo_batimento)
+
+        async def _eleger(self):
+            if self.em_eleicao or not self.ativo:
+                return
+            self.em_eleicao, self.recebeu_ok = True, False
+            maiores = [numero for numero in self.configuracao.identificadores
+                    if numero > self.identificador]
+            await asyncio.gather(*(self.enviar(numero, criar_mensagem(
+                "ELEICAO", self.identificador)) for numero in maiores))
+            await asyncio.sleep(self.espera_eleicao)
+            if not self.recebeu_ok and self.ativo:
+                self.lider = self.identificador
+                self.sequencia = len(self.ordem_global)
+                self.em_eleicao = False
+                await self.difundir(criar_mensagem("LIDER", self.identificador))
+                self._mostrar(f"Nó {self.identificador} é o novo líder")
+            else:
+                self.em_eleicao = False
+                self.ultimo_batimento = monotonic()
+
+        async def _capturar(self, solicitante):
+            if self.captura_atual:
+                resultado = {"situacao": "ocupada", "corte": self.sequencia, "estados": {}}
+                await self.enviar(solicitante, criar_mensagem(
+                    "ESTADO", self.identificador, acao="resultado", resultado=resultado))
+                return
+            self.captura_atual = {"solicitante": solicitante, "corte": self.sequencia,
+                                "respostas": {}}
+            await self.difundir(criar_mensagem("PEDIR_ESTADO", self.identificador,
+                corte=self.sequencia, lider=self.identificador))
+            self._criar_tarefa(self._expirar_captura())
+
+        async def _expirar_captura(self):
+            await asyncio.sleep(self.limite_captura)
+            if self.captura_atual:
+                await self._finalizar_captura(False)
+
+        async def _finalizar_captura(self, completa):
+            captura, self.captura_atual = self.captura_atual, None
+            resultado = {"situacao": "completa" if completa else "incompleta",
+                        "corte": captura["corte"],
+                        "estados": {numero: item["estado"]
+                                    for numero, item in captura["respostas"].items()}}
+            await self.enviar(captura["solicitante"], criar_mensagem(
+                "ESTADO", self.identificador, acao="resultado", resultado=resultado))
+
+        def _registrar(self, evento, texto, outro=None):
+            self.ordem_local.append({"numero": len(self.ordem_local) + 1,
+                "evento": evento, "texto": texto, "outro": outro})
+
+        def _mostrar(self, texto):
+            if self.mostrar_saida:
+                print(texto)
+
+        def estado(self):
+            return {"no": self.identificador, "lider": self.lider,
+                    "relogio": self.relogio.copia(),
+                    "ordem_local": [item.copy() for item in self.ordem_local],
+                    "ordem_global": [item.copy() for item in self.ordem_global],
+                    "buffer": [item.copy() for item in self.mensagens_pendentes.values()]}
