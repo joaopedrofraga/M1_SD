@@ -1,6 +1,8 @@
 import asyncio
 import json
 
+from .no import No
+
 Menu = """
     ==============================
     1 - Enviar mensagem privada
@@ -23,24 +25,29 @@ async def solicitar_mensagem(texto: str) -> str:
 async def executar_opcao(no: No, opcao: str, perguntar=ler_terminal) -> bool:
     if opcao == "1":
         # Mensagem privada
-        pass
+        destino = int(await perguntar("ID do destino: "))
+        texto = solicitar_mensagem(await perguntar("Mensagem: "))
+        await no.enviar_privada(destino, texto)
     elif opcao == "2":
         # Mensagem em grupo
-        pass
+        texto = solicitar_mensagem(await perguntar("Mensagem: "))
+        await no.enviar_grupo(texto)
     elif opcao == "3":
         # Mostrar estado local
-        pass
+        print(json.dumps(no.estado(), ensure_ascii=False, indent=2))
     elif opcao == "4":
         # Capturar estado global
-        pass
+        await no.iniciar_captura()
+        print("Captura solicitada; aguarde o resultado.")
     elif opcao == "5":
         # Mostrar ordem global
-        pass
+        print(json.dumps(no.ordem_global, ensure_ascii=False, indent=2))
     elif opcao == "6":
         # Retornar ao menu
+        print(Menu)
         pass
     elif opcao == "0":
-        print("Saindo...")
+        await no.encerrar()
         return False
     else:
         print("Opção inválida. Tente novamente.")
@@ -50,12 +57,13 @@ async def executar_interface(no: No) -> None:
     print("=======CHAT DISTRIBUÍDO=======")
     print(Menu)
     
-    try:
-        opcao = await ler_terminal(f"Nó {no.identificador} - Escolha uma opção: ")
-        if not await executar_opcao(no, opcao):
-            return
-    except (ValueError, ConnectionError, RuntimeError) as erro:
-        print(f"Erro: {erro}")
-    except EOFError:
-        print("Entrada encerrada. Saindo...")
-        return
+    while no.ativo:
+        try:
+            opcao = await ler_terminal(f"Nó {no.identificador} - Escolha uma opção: ")
+            if not await executar_opcao(no, opcao):
+                break
+        except (ValueError, ConnectionError, RuntimeError) as erro:
+            print(f"Erro: {erro}")
+        except EOFError:
+            await no.encerrar()
+            break
