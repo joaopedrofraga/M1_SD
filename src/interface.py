@@ -26,11 +26,11 @@ async def executar_opcao(no: No, opcao: str, perguntar=ler_terminal) -> bool:
     if opcao == "1":
         # Mensagem privada
         destino = int(await perguntar("ID do destino: "))
-        texto = solicitar_mensagem(await perguntar("Mensagem: "))
+        texto = await solicitar_mensagem(await perguntar("Mensagem: "))
         await no.enviar_privada(destino, texto)
     elif opcao == "2":
         # Mensagem em grupo
-        texto = solicitar_mensagem(await perguntar("Mensagem: "))
+        texto = await solicitar_mensagem(await perguntar("Mensagem: "))
         await no.enviar_grupo(texto)
     elif opcao == "3":
         # Mostrar estado local
