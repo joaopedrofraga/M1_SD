@@ -40,16 +40,6 @@
             "numero": 8,
             "endereco": "127.0.0.1",
             "porta": 5108
-        },
-        {
-            "numero": 9,
-            "endereco": "127.0.0.1",
-            "porta": 5109
-        },
-        {
-            "numero": 10,
-            "endereco": "127.0.0.1",
-            "porta": 5110
         }
     ]
 }
